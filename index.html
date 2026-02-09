@@ -11,35 +11,62 @@
      <!-- phase 1 task 1 (Navigation Bar) -->
     <nav class="navbar navbar-dark bg-dark">
         <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1">Full-Stack App (Kirby Nicole Montecillo)</span>
-            <div class="d-flex">
-                <button class="btn btn-outline-light me-2" id="loginBtn">Login</button>
-                <button class="btn btn-outline-light" id="registerBtn">Register</button>
+            <span class="navbar-brand mb-0 h1">Full-Stack App</span>
+            <div class="d-flex flex-column align-items-end">
+                <a href="#" class="text-white text-decoration-none mb-1" id="loginBtn">Login</a>
+                <a href="#" class="text-white text-decoration-none" id="registerBtn">Register</a>
             </div>
         </div>
     </nav>
 
-        <!-- contents -->
-    <div class="container mt-5">
-        <h2>Welcome to Full-Stack App</h2>
-        <p class="text-muted">A static prototype before backend integration. Simulates:</p>
-        <ul>
-            <li>Email registration + fake verification</li>
-            <li>Login with JWT-like token simulation</li>
-            <li>Role-based UI (Admin/User)</li>
-            <li>CRUD for Employees, Departments, Requests</li>
-        </ul>
+    <main class="container mt-4">
+        <!-- Home Section -->
+        <section id="homeSection">
+            <h2>Welcome to Full-Stack App</h2>
+            <p class="text-muted">A static prototype before backend integration. Simulates:</p>
+            <ul>
+                <li>Email registration + fake verification</li>
+                <li>Login with JWT-like token simulation</li>
+                <li>Role-based UI (Admin/User)</li>
+                <li>CRUD for Employees, Departments, Requests</li>
+            </ul>
 
-        <!-- note box -->
-        <div class="alert alert-info" role="alert">
-            <strong>⚠️ Note:</strong> All data is stored in <code>localStorage</code>. Refresh to reset.
-        </div>
+            <!-- note box -->
+            <div class="alert alert-info" role="alert">
+                <strong>⚠️ Note:</strong> All data is stored in <code>localStorage</code>. Refresh to reset.
+            </div>
 
-        <!-- get started button -->
-        <button class="btn btn-primary" id="getStartedBtn">Get Started →</button>
-    </div>
+            <!-- get started button -->
+            <button class="btn btn-primary" id="getStartedBtn">Get Started →</button>
+        </section>
+
+        <!-- Register Section -->
+        <section id="registerSection" style="display: none;">
+            <h2>Register Account</h2>
+            <form id="registerForm" class="mt-3" style="max-width: 400px;">
+                <div class="mb-3">
+                    <label for="regFirstName" class="form-label">First Name</label>
+                    <input type="text" class="form-control" id="regFirstName" required>
+                </div>
+                <div class="mb-3">
+                    <label for="regLastName" class="form-label">Last Name</label>
+                    <input type="text" class="form-control" id="regLastName" required>
+                </div>
+                <div class="mb-3">
+                    <label for="regEmail" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="regEmail" required>
+                </div>
+                <div class="mb-3">
+                    <label for="regPassword" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="regPassword" required>
+                </div>
+                <button type="submit" class="btn btn-success">Sign Up</button>
+                <button type="button" class="btn btn-secondary" id="cancelRegisterBtn">Cancel</button>
+            </form>
+        </section>
+    </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
-    <script src="scripts.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
