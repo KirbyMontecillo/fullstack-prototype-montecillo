@@ -36,6 +36,15 @@ const accountFormSection = document.getElementById('accountFormSection');
 const cancelDepartmentBtn = document.getElementById('cancelDepartmentBtn');
 const cancelAccountBtn = document.getElementById('cancelAccountBtn');
 const resetPasswordBtn = document.getElementById('resetPasswordBtn');
+const myRequestsSection = document.getElementById('myRequestsSection');
+const myRequestsLink = document.getElementById('myRequestsLink');
+const newRequestBtn = document.getElementById('newRequestBtn');
+const createFirstRequestBtn = document.getElementById('createFirstRequestBtn');
+const requestModal = document.getElementById('requestModal');
+const closeRequestModal = document.getElementById('closeRequestModal');
+const requestForm = document.getElementById('requestForm');
+const noRequestsMessage = document.getElementById('noRequestsMessage');
+const requestsTable = document.getElementById('requestsTable');
 
 // Show Register Section
 registerBtn.addEventListener('click', (e) => {
@@ -423,6 +432,7 @@ function hideAllSections() {
     departmentFormSection.style.display = 'none';
     accountsSection.style.display = 'none';
     accountFormSection.style.display = 'none';
+    myRequestsSection.style.display = 'none';
 }
 
 // Edit account
@@ -481,6 +491,137 @@ resetPasswordBtn.addEventListener('click', () => {
         alert('Please fill in the email field first.');
     }
 });
+
+// My Requests link click
+myRequestsLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    hideAllSections();
+    myRequestsSection.style.display = 'block';
+    loadMyRequests();
+});
+
+// New Request button
+newRequestBtn.addEventListener('click', () => {
+    requestModal.style.display = 'block';
+});
+
+// Create First Request button
+createFirstRequestBtn.addEventListener('click', () => {
+    requestModal.style.display = 'block';
+});
+
+// Close Request Modal
+closeRequestModal.addEventListener('click', () => {
+    requestModal.style.display = 'none';
+    requestForm.reset();
+});
+
+// Close modal when clicking outside
+requestModal.addEventListener('click', (e) => {
+    if (e.target === requestModal) {
+        requestModal.style.display = 'none';
+        requestForm.reset();
+    }
+});
+
+// Add request item
+function addRequestItem() {
+    const itemsDiv = document.getElementById('requestItems');
+    const newItem = document.createElement('div');
+    newItem.className = 'input-group mb-2';
+    newItem.innerHTML = `
+        <input type="text" class="form-control" placeholder="Item name" required>
+        <input type="number" class="form-control" value="1" min="1" style="max-width: 80px;">
+        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">×</button>
+    `;
+    itemsDiv.appendChild(newItem);
+}
+
+// Load My Requests
+function loadMyRequests() {
+    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+    if (!loggedInUser) return;
+    
+    const allRequests = JSON.parse(localStorage.getItem('requests')) || [];
+    const myRequests = allRequests.filter(req => req.userEmail === loggedInUser.email);
+    
+    if (myRequests.length === 0) {
+        noRequestsMessage.style.display = 'block';
+        requestsTable.style.display = 'none';
+    } else {
+        noRequestsMessage.style.display = 'none';
+        requestsTable.style.display = 'table';
+        
+        const tbody = document.getElementById('requestsTableBody');
+        tbody.innerHTML = myRequests.map(req => `
+            <tr>
+                <td>${req.type}</td>
+                <td>${req.items.map(item => `${item.name} (${item.quantity})`).join(', ')}</td>
+                <td><span class="badge bg-${req.status === 'Pending' ? 'warning' : req.status === 'Approved' ? 'success' : 'danger'}">${req.status}</span></td>
+                <td>${new Date(req.date).toLocaleDateString()}</td>
+                <td>
+                    <button class="btn btn-sm btn-info" onclick="viewRequest('${req.id}')">View</button>
+                    ${req.status === 'Pending' ? `<button class="btn btn-sm btn-danger" onclick="deleteRequest('${req.id}')">Delete</button>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    }
+}
+
+// Handle request form submit
+requestForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+    if (!loggedInUser) return;
+    
+    // Get all items
+    const itemInputs = document.querySelectorAll('#requestItems .input-group');
+    const items = Array.from(itemInputs).map(group => {
+        const inputs = group.querySelectorAll('input');
+        return {
+            name: inputs[0].value,
+            quantity: parseInt(inputs[1].value)
+        };
+    });
+    
+    const request = {
+        id: Date.now().toString(),
+        userEmail: loggedInUser.email,
+        userName: `${loggedInUser.firstName} ${loggedInUser.lastName}`,
+        type: document.getElementById('requestType').value,
+        items: items,
+        status: 'Pending',
+        date: new Date().toISOString()
+    };
+    
+    let requests = JSON.parse(localStorage.getItem('requests')) || [];
+    requests.push(request);
+    localStorage.setItem('requests', JSON.stringify(requests));
+    
+    requestModal.style.display = 'none';
+    requestForm.reset();
+    loadMyRequests();
+});
+
+// View request (placeholder)
+function viewRequest(id) {
+    const requests = JSON.parse(localStorage.getItem('requests')) || [];
+    const request = requests.find(r => r.id === id);
+    if (request) {
+        alert(`Request Details:\nType: ${request.type}\nItems: ${request.items.map(i => `${i.name} (${i.quantity})`).join(', ')}\nStatus: ${request.status}`);
+    }
+}
+
+// Delete request
+function deleteRequest(id) {
+    if (confirm('Delete this request?')) {
+        let requests = JSON.parse(localStorage.getItem('requests')) || [];
+        requests = requests.filter(r => r.id !== id);
+        localStorage.setItem('requests', JSON.stringify(requests));
+        loadMyRequests();
+    }
+}
 
 // Check if user is already logged in on page load
 window.addEventListener('load', () => {
