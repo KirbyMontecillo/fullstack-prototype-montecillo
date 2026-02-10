@@ -25,6 +25,17 @@ const loginForm = document.getElementById('loginForm');
 const addEmployeeBtn = document.getElementById('addEmployeeBtn');
 const employeeFormSection = document.getElementById('employeeFormSection');
 const cancelEmployeeBtn = document.getElementById('cancelEmployeeBtn');
+const departmentsSection = document.getElementById('departmentsSection');
+const accountsSection = document.getElementById('accountsSection');
+const departmentsLink = document.getElementById('departmentsLink');
+const accountsLink = document.getElementById('accountsLink');
+const addDepartmentBtn = document.getElementById('addDepartmentBtn');
+const addAccountBtn = document.getElementById('addAccountBtn');
+const departmentFormSection = document.getElementById('departmentFormSection');
+const accountFormSection = document.getElementById('accountFormSection');
+const cancelDepartmentBtn = document.getElementById('cancelDepartmentBtn');
+const cancelAccountBtn = document.getElementById('cancelAccountBtn');
+const resetPasswordBtn = document.getElementById('resetPasswordBtn');
 
 // Show Register Section
 registerBtn.addEventListener('click', (e) => {
@@ -223,17 +234,6 @@ function loadEmployees() {
     }
 }
 
-// Hide all sections helper
-function hideAllSections() {
-    homeSection.style.display = 'none';
-    registerSection.style.display = 'none';
-    verifyEmailSection.style.display = 'none';
-    loginSection.style.display = 'none';
-    profileSection.style.display = 'none';
-    employeesSection.style.display = 'none';
-    employeeFormSection.style.display = 'none';
-}
-
 // Handle employee form submit
 document.getElementById('employeeForm').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -254,6 +254,233 @@ document.getElementById('employeeForm').addEventListener('submit', (e) => {
     loadEmployees();
 });
 
+// Departments link click
+departmentsLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    hideAllSections();
+    departmentsSection.style.display = 'block';
+    loadDepartments();
+});
+
+// Accounts link click
+accountsLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    hideAllSections();
+    accountsSection.style.display = 'block';
+    loadAccounts();
+});
+
+// Add Department button
+addDepartmentBtn.addEventListener('click', () => {
+    departmentFormSection.style.display = 'block';
+    document.getElementById('departmentFormTitle').textContent = 'Add Department';
+    document.getElementById('departmentForm').reset();
+});
+
+// Cancel Department form
+cancelDepartmentBtn.addEventListener('click', () => {
+    departmentFormSection.style.display = 'none';
+});
+
+// Add Account button
+addAccountBtn.addEventListener('click', () => {
+    accountFormSection.style.display = 'block';
+    document.getElementById('accountFormTitle').textContent = 'Add Account';
+    document.getElementById('accountForm').reset();
+});
+
+// Cancel Account form
+cancelAccountBtn.addEventListener('click', () => {
+    accountFormSection.style.display = 'none';
+});
+
+// Load departments from localStorage
+function loadDepartments() {
+    const departments = JSON.parse(localStorage.getItem('departments')) || [];
+    const tbody = document.getElementById('departmentsTableBody');
+    
+    if (departments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No departments.</td></tr>';
+    } else {
+        tbody.innerHTML = departments.map(dept => `
+            <tr>
+                <td>${dept.name}</td>
+                <td>${dept.description}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="editDepartment('${dept.name}')">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteDepartment('${dept.name}')">Delete</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+}
+
+// Load accounts from localStorage
+function loadAccounts() {
+    const users = JSON.parse(localStorage.getItem('users')) || [];
+    const tbody = document.getElementById('accountsTableBody');
+    
+    if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No accounts.</td></tr>';
+    } else {
+        tbody.innerHTML = users.map(user => `
+            <tr>
+                <td>${user.firstName} ${user.lastName}</td>
+                <td>${user.email}</td>
+                <td>${user.role || 'User'}</td>
+                <td>${user.verified ? '✅' : '❌'}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="editAccount('${user.email}')">Edit</button>
+                    <button class="btn btn-sm btn-warning" onclick="resetAccountPassword('${user.email}')">Reset Password</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteAccount('${user.email}')">Delete</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+}
+
+// Handle department form submit
+document.getElementById('departmentForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const department = {
+        name: document.getElementById('deptName').value,
+        description: document.getElementById('deptDescription').value
+    };
+    
+    let departments = JSON.parse(localStorage.getItem('departments')) || [];
+    departments.push(department);
+    localStorage.setItem('departments', JSON.stringify(departments));
+    
+    departmentFormSection.style.display = 'none';
+    loadDepartments();
+});
+
+// Handle account form submit
+document.getElementById('accountForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const account = {
+        firstName: document.getElementById('accFirstName').value,
+        lastName: document.getElementById('accLastName').value,
+        email: document.getElementById('accEmail').value,
+        password: document.getElementById('accPassword').value,
+        role: document.getElementById('accRole').value,
+        verified: document.getElementById('accVerified').checked
+    };
+    
+    let users = JSON.parse(localStorage.getItem('users')) || [];
+    const originalEmail = document.getElementById('accountForm').dataset.originalEmail;
+    
+    if (originalEmail) {
+        // Edit existing account
+        const userIndex = users.findIndex(u => u.email === originalEmail);
+        if (userIndex !== -1) {
+            users[userIndex] = account;
+        }
+        delete document.getElementById('accountForm').dataset.originalEmail;
+    } else {
+        // Add new account
+        users.push(account);
+    }
+    
+    localStorage.setItem('users', JSON.stringify(users));
+    accountFormSection.style.display = 'none';
+    document.getElementById('accountForm').reset();
+    loadAccounts();
+});
+
+// Delete department (placeholder)
+function deleteDepartment(name) {
+    if (confirm(`Delete department "${name}"?`)) {
+        let departments = JSON.parse(localStorage.getItem('departments')) || [];
+        departments = departments.filter(d => d.name !== name);
+        localStorage.setItem('departments', JSON.stringify(departments));
+        loadDepartments();
+    }
+}
+
+// Delete account (placeholder)
+function deleteAccount(email) {
+    if (confirm(`Delete account "${email}"?`)) {
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+        users = users.filter(u => u.email !== email);
+        localStorage.setItem('users', JSON.stringify(users));
+        loadAccounts();
+    }
+}
+
+// Hide all sections helper
+function hideAllSections() {
+    homeSection.style.display = 'none';
+    registerSection.style.display = 'none';
+    verifyEmailSection.style.display = 'none';
+    loginSection.style.display = 'none';
+    profileSection.style.display = 'none';
+    employeesSection.style.display = 'none';
+    employeeFormSection.style.display = 'none';
+    departmentsSection.style.display = 'none';
+    departmentFormSection.style.display = 'none';
+    accountsSection.style.display = 'none';
+    accountFormSection.style.display = 'none';
+}
+
+// Edit account
+function editAccount(email) {
+    const users = JSON.parse(localStorage.getItem('users')) || [];
+    const user = users.find(u => u.email === email);
+    
+    if (user) {
+        accountFormSection.style.display = 'block';
+        document.getElementById('accountFormTitle').textContent = 'Edit Account';
+        document.getElementById('accFirstName').value = user.firstName;
+        document.getElementById('accLastName').value = user.lastName;
+        document.getElementById('accEmail').value = user.email;
+        document.getElementById('accPassword').value = user.password;
+        document.getElementById('accRole').value = user.role || 'User';
+        document.getElementById('accVerified').checked = user.verified;
+        
+        // Store original email for updating
+        document.getElementById('accountForm').dataset.originalEmail = email;
+    }
+}
+
+// Reset account password
+function resetAccountPassword(email) {
+    const newPassword = prompt('Enter new password for ' + email + ':');
+    if (newPassword) {
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+        const userIndex = users.findIndex(u => u.email === email);
+        
+        if (userIndex !== -1) {
+            users[userIndex].password = newPassword;
+            localStorage.setItem('users', JSON.stringify(users));
+            alert('Password reset successfully!');
+            loadAccounts();
+        }
+    }
+}
+
+// Delete account
+function deleteAccount(email) {
+    if (confirm(`Delete account "${email}"?`)) {
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+        users = users.filter(u => u.email !== email);
+        localStorage.setItem('users', JSON.stringify(users));
+        loadAccounts();
+    }
+}
+
+// Reset Password button in form
+resetPasswordBtn.addEventListener('click', () => {
+    const email = document.getElementById('accEmail').value;
+    if (email) {
+        resetAccountPassword(email);
+        accountFormSection.style.display = 'none';
+    } else {
+        alert('Please fill in the email field first.');
+    }
+});
 
 // Check if user is already logged in on page load
 window.addEventListener('load', () => {
