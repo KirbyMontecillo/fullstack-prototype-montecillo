@@ -8,13 +8,32 @@
     <title>Full-Stack App (Student Build)</title>
 </head>
 <body>
-     <!-- phase 1 task 1 (Navigation Bar) -->
+
+    <!-- phase 1 task 1 (Navigation Bar) -->
     <nav class="navbar navbar-dark bg-dark">
         <div class="container-fluid">
             <span class="navbar-brand mb-0 h1">Full-Stack App</span>
-            <div class="d-flex flex-column align-items-end">
+            
+            <!-- Not logged in -->
+            <div class="d-flex flex-column align-items-end" id="navNotLoggedIn">
                 <a href="#" class="text-white text-decoration-none mb-1" id="loginBtn">Login</a>
                 <a href="#" class="text-white text-decoration-none" id="registerBtn">Register</a>
+            </div>
+            
+            <!-- Logged in (initially hidden) -->
+            <div class="dropdown" id="navLoggedIn" style="display: none;">
+                <button class="btn btn-dark dropdown-toggle text-white" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span id="usernameDisplay">Admin</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                    <li><a class="dropdown-item" href="#" id="profileLink">Profile</a></li>
+                    <li class="role-admin"><a class="dropdown-item" href="#" id="employeesLink">Employees</a></li>
+                    <li class="role-admin"><a class="dropdown-item" href="#" id="accountsLink">Accounts</a></li>
+                    <li class="role-admin"><a class="dropdown-item" href="#" id="departmentsLink">Departments</a></li>
+                    <li><a class="dropdown-item" href="#" id="myRequestsLink">My Requests</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="#" id="logoutLink">Logout</a></li>
+                </ul>
             </div>
         </div>
     </nav>
@@ -98,6 +117,79 @@
                 <button type="submit" class="btn btn-primary">Login</button>
                 <button type="button" class="btn btn-secondary" id="cancelLoginBtn">Cancel</button>
             </form>
+        </section>
+
+        <!-- profile -->
+        <section id="profileSection" style="display: none;">
+            <h2>My Profile</h2>
+            <div class="card mt-3" style="max-width: 600px;">
+                <div class="card-body">
+                    <h5 class="card-title" id="profileName">Admin User</h5>
+                    <p class="card-text"><strong>Email:</strong> <span id="profileEmail">admin@example.com</span></p>
+                    <p class="card-text"><strong>Role:</strong> <span id="profileRole">Admin</span></p>
+                    <button class="btn btn-primary btn-sm" id="editProfileBtn">Edit Profile</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- employees (admin) -->
+        <section id="employeesSection" class="role-admin" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2>Employees</h2>
+                <button class="btn btn-success" id="addEmployeeBtn">+ Add Employee</button>
+            </div>
+            
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Position</th>
+                        <th>Dept</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="employeesTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No employees.</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <!-- employee form -->
+            <div id="employeeFormSection" style="display: none;">
+                <h4 id="employeeFormTitle">Add/Edit Employee</h4>
+                <form id="employeeForm" class="mt-3" style="max-width: 500px;">
+                    <div class="mb-3">
+                        <label for="empId" class="form-label">Employee ID</label>
+                        <input type="text" class="form-control" id="empId" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="empEmail" class="form-label">User Email</label>
+                        <input type="email" class="form-control" id="empEmail" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="empPosition" class="form-label">Position</label>
+                        <input type="text" class="form-control" id="empPosition" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="empDepartment" class="form-label">Department</label>
+                        <select class="form-select" id="empDepartment" required>
+                            <option value="">Select Department</option>
+                            <option value="Engineering">Engineering</option>
+                            <option value="HR">HR</option>
+                            <option value="Sales">Sales</option>
+                            <option value="Marketing">Marketing</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="empHireDate" class="form-label">Hire Date</label>
+                        <input type="date" class="form-control" id="empHireDate" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" id="cancelEmployeeBtn">Cancel</button>
+                </form>
+            </div>
         </section>
     </main>
 
