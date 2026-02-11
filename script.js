@@ -1,3 +1,67 @@
+// ===== PHASE 4: DATA PERSISTENCE =====
+const STORAGE_KEY = 'ipt_demo_v1';
+
+// Global database object
+window.db = {
+    users: [],
+    employees: [],
+    departments: [],
+    requests: []
+};
+
+// Load data from localStorage
+function loadFromStorage() {
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            window.db = JSON.parse(stored);
+        } else {
+            // Seed initial data
+            seedInitialData();
+        }
+    } catch (error) {
+        console.error('Error loading from storage:', error);
+        seedInitialData();
+    }
+}
+
+// Seed initial data
+function seedInitialData() {
+    window.db = {
+        users: [
+            {
+                firstName: 'Admin',
+                lastName: 'User',
+                email: 'admin@example.com',
+                password: 'Password123!',
+                role: 'Admin',
+                verified: true
+            }
+        ],
+        employees: [],
+        departments: [
+            { name: 'Engineering', description: 'Software Development' },
+            { name: 'HR', description: 'Human Resources' }
+        ],
+        requests: []
+    };
+    saveToStorage();
+}
+
+// Save data to localStorage
+function saveToStorage() {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(window.db));
+    } catch (error) {
+        console.error('Error saving to storage:', error);
+    }
+}
+
+// Initialize on load
+loadFromStorage();
+
+// ===== END PHASE 4 =====
+
 // Get elements
 const homeSection = document.getElementById('homeSection');
 const registerSection = document.getElementById('registerSection');
@@ -71,12 +135,13 @@ registerForm.addEventListener('submit', (e) => {
     
     const email = document.getElementById('regEmail').value;
     
-    // Store user data in localStorage (you can expand this later)
+    // Store user data
     const userData = {
         firstName: document.getElementById('regFirstName').value,
         lastName: document.getElementById('regLastName').value,
         email: email,
         password: document.getElementById('regPassword').value,
+        role: 'User', // Default role
         verified: false
     };
     
@@ -96,10 +161,9 @@ simulateVerifyBtn.addEventListener('click', () => {
     const userData = JSON.parse(localStorage.getItem('pendingUser'));
     userData.verified = true;
     
-    // Save to users array
-    let users = JSON.parse(localStorage.getItem('users')) || [];
-    users.push(userData);
-    localStorage.setItem('users', JSON.stringify(users));
+    // Add to database
+    window.db.users.push(userData);
+    saveToStorage();
     localStorage.removeItem('pendingUser');
     
     // Show login section with success message
@@ -137,9 +201,8 @@ loginForm.addEventListener('submit', (e) => {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
     
-    // Get users from localStorage
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-    const user = users.find(u => u.email === email && u.password === password && u.verified);
+    // Get users from database
+    const user = window.db.users.find(u => u.email === email && u.password === password && u.verified);
     
     if (user) {
         // Store logged in user
@@ -147,7 +210,7 @@ loginForm.addEventListener('submit', (e) => {
             firstName: user.firstName,
             lastName: user.lastName,
             email: user.email,
-            role: email.includes('admin') ? 'Admin' : 'User' // Simple role assignment
+            role: user.role
         };
         localStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
         
@@ -220,9 +283,9 @@ cancelEmployeeBtn.addEventListener('click', () => {
     employeeFormSection.style.display = 'none';
 });
 
-// Load employees from localStorage
+// Load employees from database
 function loadEmployees() {
-    const employees = JSON.parse(localStorage.getItem('employees')) || [];
+    const employees = window.db.employees;
     const tbody = document.getElementById('employeesTableBody');
     
     if (employees.length === 0) {
@@ -255,13 +318,21 @@ document.getElementById('employeeForm').addEventListener('submit', (e) => {
         hireDate: document.getElementById('empHireDate').value
     };
     
-    let employees = JSON.parse(localStorage.getItem('employees')) || [];
-    employees.push(employee);
-    localStorage.setItem('employees', JSON.stringify(employees));
+    window.db.employees.push(employee);
+    saveToStorage();
     
     employeeFormSection.style.display = 'none';
     loadEmployees();
 });
+
+// Delete employee
+function deleteEmployee(id) {
+    if (confirm(`Delete employee "${id}"?`)) {
+        window.db.employees = window.db.employees.filter(e => e.id !== id);
+        saveToStorage();
+        loadEmployees();
+    }
+}
 
 // Departments link click
 departmentsLink.addEventListener('click', (e) => {
@@ -303,9 +374,9 @@ cancelAccountBtn.addEventListener('click', () => {
     accountFormSection.style.display = 'none';
 });
 
-// Load departments from localStorage
+// Load departments from database
 function loadDepartments() {
-    const departments = JSON.parse(localStorage.getItem('departments')) || [];
+    const departments = window.db.departments;
     const tbody = document.getElementById('departmentsTableBody');
     
     if (departments.length === 0) {
@@ -324,9 +395,9 @@ function loadDepartments() {
     }
 }
 
-// Load accounts from localStorage
+// Load accounts from database
 function loadAccounts() {
-    const users = JSON.parse(localStorage.getItem('users')) || [];
+    const users = window.db.users;
     const tbody = document.getElementById('accountsTableBody');
     
     if (users.length === 0) {
@@ -357,9 +428,8 @@ document.getElementById('departmentForm').addEventListener('submit', (e) => {
         description: document.getElementById('deptDescription').value
     };
     
-    let departments = JSON.parse(localStorage.getItem('departments')) || [];
-    departments.push(department);
-    localStorage.setItem('departments', JSON.stringify(departments));
+    window.db.departments.push(department);
+    saveToStorage();
     
     departmentFormSection.style.display = 'none';
     loadDepartments();
@@ -378,43 +448,40 @@ document.getElementById('accountForm').addEventListener('submit', (e) => {
         verified: document.getElementById('accVerified').checked
     };
     
-    let users = JSON.parse(localStorage.getItem('users')) || [];
     const originalEmail = document.getElementById('accountForm').dataset.originalEmail;
     
     if (originalEmail) {
         // Edit existing account
-        const userIndex = users.findIndex(u => u.email === originalEmail);
+        const userIndex = window.db.users.findIndex(u => u.email === originalEmail);
         if (userIndex !== -1) {
-            users[userIndex] = account;
+            window.db.users[userIndex] = account;
         }
         delete document.getElementById('accountForm').dataset.originalEmail;
     } else {
         // Add new account
-        users.push(account);
+        window.db.users.push(account);
     }
     
-    localStorage.setItem('users', JSON.stringify(users));
+    saveToStorage();
     accountFormSection.style.display = 'none';
     document.getElementById('accountForm').reset();
     loadAccounts();
 });
 
-// Delete department (placeholder)
+// Delete department
 function deleteDepartment(name) {
     if (confirm(`Delete department "${name}"?`)) {
-        let departments = JSON.parse(localStorage.getItem('departments')) || [];
-        departments = departments.filter(d => d.name !== name);
-        localStorage.setItem('departments', JSON.stringify(departments));
+        window.db.departments = window.db.departments.filter(d => d.name !== name);
+        saveToStorage();
         loadDepartments();
     }
 }
 
-// Delete account (placeholder)
+// Delete account
 function deleteAccount(email) {
     if (confirm(`Delete account "${email}"?`)) {
-        let users = JSON.parse(localStorage.getItem('users')) || [];
-        users = users.filter(u => u.email !== email);
-        localStorage.setItem('users', JSON.stringify(users));
+        window.db.users = window.db.users.filter(u => u.email !== email);
+        saveToStorage();
         loadAccounts();
     }
 }
@@ -437,8 +504,7 @@ function hideAllSections() {
 
 // Edit account
 function editAccount(email) {
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-    const user = users.find(u => u.email === email);
+    const user = window.db.users.find(u => u.email === email);
     
     if (user) {
         accountFormSection.style.display = 'block';
@@ -459,25 +525,14 @@ function editAccount(email) {
 function resetAccountPassword(email) {
     const newPassword = prompt('Enter new password for ' + email + ':');
     if (newPassword) {
-        let users = JSON.parse(localStorage.getItem('users')) || [];
-        const userIndex = users.findIndex(u => u.email === email);
+        const userIndex = window.db.users.findIndex(u => u.email === email);
         
         if (userIndex !== -1) {
-            users[userIndex].password = newPassword;
-            localStorage.setItem('users', JSON.stringify(users));
+            window.db.users[userIndex].password = newPassword;
+            saveToStorage();
             alert('Password reset successfully!');
             loadAccounts();
         }
-    }
-}
-
-// Delete account
-function deleteAccount(email) {
-    if (confirm(`Delete account "${email}"?`)) {
-        let users = JSON.parse(localStorage.getItem('users')) || [];
-        users = users.filter(u => u.email !== email);
-        localStorage.setItem('users', JSON.stringify(users));
-        loadAccounts();
     }
 }
 
@@ -542,8 +597,7 @@ function loadMyRequests() {
     const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
     if (!loggedInUser) return;
     
-    const allRequests = JSON.parse(localStorage.getItem('requests')) || [];
-    const myRequests = allRequests.filter(req => req.userEmail === loggedInUser.email);
+    const myRequests = window.db.requests.filter(req => req.userEmail === loggedInUser.email);
     
     if (myRequests.length === 0) {
         noRequestsMessage.style.display = 'block';
@@ -595,19 +649,17 @@ requestForm.addEventListener('submit', (e) => {
         date: new Date().toISOString()
     };
     
-    let requests = JSON.parse(localStorage.getItem('requests')) || [];
-    requests.push(request);
-    localStorage.setItem('requests', JSON.stringify(requests));
+    window.db.requests.push(request);
+    saveToStorage();
     
     requestModal.style.display = 'none';
     requestForm.reset();
     loadMyRequests();
 });
 
-// View request (placeholder)
+// View request
 function viewRequest(id) {
-    const requests = JSON.parse(localStorage.getItem('requests')) || [];
-    const request = requests.find(r => r.id === id);
+    const request = window.db.requests.find(r => r.id === id);
     if (request) {
         alert(`Request Details:\nType: ${request.type}\nItems: ${request.items.map(i => `${i.name} (${i.quantity})`).join(', ')}\nStatus: ${request.status}`);
     }
@@ -616,9 +668,8 @@ function viewRequest(id) {
 // Delete request
 function deleteRequest(id) {
     if (confirm('Delete this request?')) {
-        let requests = JSON.parse(localStorage.getItem('requests')) || [];
-        requests = requests.filter(r => r.id !== id);
-        localStorage.setItem('requests', JSON.stringify(requests));
+        window.db.requests = window.db.requests.filter(r => r.id !== id);
+        saveToStorage();
         loadMyRequests();
     }
 }
