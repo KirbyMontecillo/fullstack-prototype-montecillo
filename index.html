@@ -30,7 +30,8 @@
                     <li class="role-admin"><a class="dropdown-item" href="#" id="employeesLink">Employees</a></li>
                     <li class="role-admin"><a class="dropdown-item" href="#" id="accountsLink">Accounts</a></li>
                     <li class="role-admin"><a class="dropdown-item" href="#" id="departmentsLink">Departments</a></li>
-                    <li><a class="dropdown-item" href="#" id="myRequestsLink">My Requests</a></li>
+                    <li class="role-admin"><a class="dropdown-item" href="#" id="allRequestsLink">Requests</a></li>
+                    <li class="role-user"><a class="dropdown-item" href="#" id="myRequestsLink">My Requests</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item text-danger" href="#" id="logoutLink">Logout</a></li>
                 </ul>
@@ -354,6 +355,28 @@
                 </form>
             </div>
         </div>
+<!-- All Requests Section (Admin only) -->
+        <section id="allRequestsSection" class="role-admin" style="display: none;">
+            <h2>All Requests</h2>
+            
+            <table class="table table-striped mt-3">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Type</th>
+                        <th>Items</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="allRequestsTableBody">
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No requests.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>

@@ -109,6 +109,8 @@ const closeRequestModal = document.getElementById('closeRequestModal');
 const requestForm = document.getElementById('requestForm');
 const noRequestsMessage = document.getElementById('noRequestsMessage');
 const requestsTable = document.getElementById('requestsTable');
+const allRequestsSection = document.getElementById('allRequestsSection');
+const allRequestsLink = document.getElementById('allRequestsLink');
 
 // Show Register Section
 registerBtn.addEventListener('click', (e) => {
@@ -236,6 +238,12 @@ function showLoggedInNav(user) {
     const adminLinks = document.querySelectorAll('.role-admin');
     adminLinks.forEach(link => {
         link.style.display = user.role === 'Admin' ? 'block' : 'none';
+    });
+    
+    // Show/hide user-only links
+    const userLinks = document.querySelectorAll('.role-user');
+    userLinks.forEach(link => {
+        link.style.display = user.role === 'User' ? 'block' : 'none';
     });
 }
 
@@ -500,6 +508,7 @@ function hideAllSections() {
     accountsSection.style.display = 'none';
     accountFormSection.style.display = 'none';
     myRequestsSection.style.display = 'none';
+    allRequestsSection.style.display = 'none';
 }
 
 // Edit account
@@ -671,6 +680,65 @@ function deleteRequest(id) {
         window.db.requests = window.db.requests.filter(r => r.id !== id);
         saveToStorage();
         loadMyRequests();
+    }
+}
+
+// All Requests link click (Admin only)
+allRequestsLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    hideAllSections();
+    allRequestsSection.style.display = 'block';
+    loadAllRequests();
+});
+
+// Load All Requests (Admin only)
+function loadAllRequests() {
+    const allRequests = window.db.requests;
+    const tbody = document.getElementById('allRequestsTableBody');
+    
+    if (allRequests.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No requests.</td></tr>';
+    } else {
+        tbody.innerHTML = allRequests.map(req => `
+            <tr>
+                <td>${req.userName}</td>
+                <td>${req.type}</td>
+                <td>${req.items.map(item => `${item.name} (${item.quantity})`).join(', ')}</td>
+                <td><span class="badge bg-${req.status === 'Pending' ? 'warning' : req.status === 'Approved' ? 'success' : 'danger'}">${req.status}</span></td>
+                <td>${new Date(req.date).toLocaleDateString()}</td>
+                <td>
+                    <button class="btn btn-sm btn-info" onclick="viewRequest('${req.id}')">View</button>
+                    ${req.status === 'Pending' ? `
+                        <button class="btn btn-sm btn-success" onclick="approveRequest('${req.id}')">Approve</button>
+                        <button class="btn btn-sm btn-danger" onclick="rejectRequest('${req.id}')">Reject</button>
+                    ` : ''}
+                </td>
+            </tr>
+        `).join('');
+    }
+}
+
+// Approve request (Admin only)
+function approveRequest(id) {
+    if (confirm('Approve this request?')) {
+        const requestIndex = window.db.requests.findIndex(r => r.id === id);
+        if (requestIndex !== -1) {
+            window.db.requests[requestIndex].status = 'Approved';
+            saveToStorage();
+            loadAllRequests();
+        }
+    }
+}
+
+// Reject request (Admin only)
+function rejectRequest(id) {
+    if (confirm('Reject this request?')) {
+        const requestIndex = window.db.requests.findIndex(r => r.id === id);
+        if (requestIndex !== -1) {
+            window.db.requests[requestIndex].status = 'Rejected';
+            saveToStorage();
+            loadAllRequests();
+        }
     }
 }
 
