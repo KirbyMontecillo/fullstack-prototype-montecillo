@@ -1,0 +1,61 @@
+/* Button styling for tables */
+.table .btn-primary {
+    background-color: transparent;
+    border: 1px solid #0d6efd;
+    color: #0d6efd;
+}
+
+.table .btn-primary:hover {
+    background-color: #0d6efd;
+    color: white;
+}
+
+.table .btn-danger {
+    background-color: transparent;
+    border: 1px solid #dc3545;
+    color: #dc3545;
+}
+
+.table .btn-danger:hover {
+    background-color: #dc3545;
+    color: white;
+}
+
+.table .btn-warning {
+    background-color: transparent;
+    border: 1px solid #ffc107;
+    color: #ffc107;
+}
+
+.table .btn-warning:hover {
+    background-color: #ffc107;
+    color: white;
+}
+
+.table .btn-success {
+    background-color: transparent;
+    border: 1px solid #198754;
+    color: #198754;
+}
+
+.table .btn-success:hover {
+    background-color: #198754;
+    color: white;
+}
+
+.table .btn-info {
+    background-color: transparent;
+    border: 1px solid #0dcaf0;
+    color: #0dcaf0;
+}
+
+.table .btn-info:hover {
+    background-color: #0dcaf0;
+    color: white;
+}
+
+/* Small button padding */
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
