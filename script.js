@@ -60,6 +60,31 @@ function saveToStorage() {
 // Initialize on load
 loadFromStorage();
 
+// ===== BODY CLASS MANAGEMENT =====
+
+// Update body classes based on authentication state
+function updateBodyClasses(user = null) {
+    const body = document.body;
+    
+    if (user) {
+        // User is authenticated
+        body.classList.remove('not-authenticated');
+        body.classList.add('authenticated');
+        
+        // Check if user is admin
+        if (user.role === 'Admin') {
+            body.classList.add('is-admin');
+        } else {
+            body.classList.remove('is-admin');
+        }
+    } else {
+        // User is not authenticated
+        body.classList.remove('authenticated');
+        body.classList.remove('is-admin');
+        body.classList.add('not-authenticated');
+    }
+}
+
 // ===== END PHASE 4 =====
 
 // Get elements
@@ -216,6 +241,9 @@ loginForm.addEventListener('submit', (e) => {
         };
         localStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
         
+        // Update body classes for authentication
+        updateBodyClasses(loggedInUser);
+        
         // Update UI
         showLoggedInNav(loggedInUser);
         loginSection.style.display = 'none';
@@ -273,6 +301,10 @@ employeesLink.addEventListener('click', (e) => {
 logoutLink.addEventListener('click', (e) => {
     e.preventDefault();
     localStorage.removeItem('loggedInUser');
+    
+    // Update body classes - user logged out
+    updateBodyClasses(null);
+    
     navLoggedIn.style.display = 'none';
     navNotLoggedIn.style.display = 'flex';
     hideAllSections();
@@ -306,7 +338,7 @@ function loadEmployees() {
                 <td>${emp.position}</td>
                 <td>${emp.department}</td>
                 <td>
-                    <button class="btn btn-sm btn-warning" onclick="editEmployee('${emp.id}')">Edit</button>
+                    <button class="btn btn-sm btn-primary" onclick="editEmployee('${emp.id}')">Edit</button>
                     <button class="btn btn-sm btn-danger" onclick="deleteEmployee('${emp.id}')">Delete</button>
                 </td>
             </tr>
@@ -746,9 +778,15 @@ function rejectRequest(id) {
 window.addEventListener('load', () => {
     const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
     if (loggedInUser) {
+        // Update body classes for authenticated user
+        updateBodyClasses(loggedInUser);
+        
         showLoggedInNav(loggedInUser);
         updateProfileDisplay(loggedInUser);
         hideAllSections();
         profileSection.style.display = 'block';
+    } else {
+        // Update body classes for non-authenticated user
+        updateBodyClasses(null);
     }
 });

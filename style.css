@@ -35,3 +35,35 @@
     background-color: #ffc107 !important;
     color: #212529 !important;
 }
+
+/* === PAGE MANAGEMENT AND ROLE-BASED DISPLAY === */
+
+/* Hide all pages by default */
+.page {
+    display: none;
+}
+
+/* Show only the active page */
+.page.active {
+    display: block;
+}
+
+/* Hide logged-in content when not authenticated */
+body.not-authenticated .role-logged-in {
+    display: none;
+}
+
+/* Hide logged-out content when authenticated */
+body.authenticated .role-logged-out {
+    display: none;
+}
+
+/* Hide admin content by default */
+.role-admin {
+    display: none;
+}
+
+/* Show admin content when user is admin */
+body.is-admin .role-admin {
+    display: block;
+}
