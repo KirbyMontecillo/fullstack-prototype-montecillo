@@ -1,93 +1,241 @@
-// ===== PHASE 4: DATA PERSISTENCE =====
+let currentUser = null;
+
+function showToast(message, type = 'info', duration = 3000) {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = `toast-notification ${type}`;
+    const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+    
+    toast.innerHTML = `
+        <span class="toast-icon">${icons[type] || icons.info}</span>
+        <span class="toast-message">${message}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+    `;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('removing');
+        setTimeout(() => {
+            if (toast.parentElement) toast.remove();
+        }, 300);
+    }, duration);
+}
+
+function validateField(field, isValid, message = '') {
+    field.classList.remove('is-valid', 'is-invalid');
+    const existingFeedback = field.parentElement.querySelector('.invalid-feedback, .valid-feedback');
+    if (existingFeedback) existingFeedback.remove();
+    
+    if (isValid) {
+        field.classList.add('is-valid');
+    } else {
+        field.classList.add('is-invalid');
+        if (message) {
+            const feedback = document.createElement('div');
+            feedback.className = 'invalid-feedback';
+            feedback.textContent = message;
+            field.parentElement.appendChild(feedback);
+        }
+    }
+}
+
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function validatePassword(password) {
+    if (password.length < 6) return { isValid: false, message: 'password must be at least 6 characters' };
+    if (password.length < 8) return { isValid: true, message: 'password is weak. consider using 8+ characters' };
+    return { isValid: true, message: 'password strength: good' };
+}
+
+function clearFormValidation(form) {
+    form.querySelectorAll('.is-valid, .is-invalid').forEach(field => {
+        field.classList.remove('is-valid', 'is-invalid');
+    });
+    form.querySelectorAll('.invalid-feedback, .valid-feedback').forEach(feedback => feedback.remove());
+}
+
+function setButtonLoading(button) {
+    button.disabled = true;
+    button.classList.add('btn-loading');
+    button.dataset.originalText = button.textContent;
+}
+
+function removeButtonLoading(button) {
+    button.disabled = false;
+    button.classList.remove('btn-loading');
+    if (button.dataset.originalText) {
+        button.textContent = button.dataset.originalText;
+        delete button.dataset.originalText;
+    }
+}
+
 const STORAGE_KEY = 'ipt_demo_v1';
 
-// Global database object
 window.db = {
-    users: [],
+    accounts: [],
     employees: [],
     departments: [],
     requests: []
 };
 
-// Load data from localStorage
 function loadFromStorage() {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
             window.db = JSON.parse(stored);
+            if (window.db.users && !window.db.accounts) {
+                window.db.accounts = window.db.users;
+                delete window.db.users;
+                saveToStorage();
+            }
         } else {
-            // Seed initial data
             seedInitialData();
         }
     } catch (error) {
-        console.error('Error loading from storage:', error);
+        console.error('error loading from storage:', error);
         seedInitialData();
     }
 }
 
-// Seed initial data
 function seedInitialData() {
     window.db = {
-        users: [
-            {
-                firstName: 'Admin',
-                lastName: 'User',
-                email: 'admin@example.com',
-                password: 'Password123!',
-                role: 'Admin',
-                verified: true
-            }
-        ],
+        accounts: [{
+            firstName: 'Admin',
+            lastName: 'User',
+            email: 'admin@example.com',
+            password: 'Password123!',
+            role: 'Admin',
+            verified: true
+        }],
         employees: [],
         departments: [
             { name: 'Engineering', description: 'Software Development' },
-            { name: 'HR', description: 'Human Resources' }
+            { name: 'HR', description: 'Human Resources' },
+            { name: 'Sales', description: 'Sales and Marketing' },
+            { name: 'Marketing', description: 'Brand and Marketing' }
         ],
         requests: []
     };
     saveToStorage();
 }
 
-// Save data to localStorage
 function saveToStorage() {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(window.db));
     } catch (error) {
-        console.error('Error saving to storage:', error);
+        console.error('error saving to storage:', error);
     }
 }
 
-// Initialize on load
 loadFromStorage();
 
-// ===== BODY CLASS MANAGEMENT =====
-
-// Update body classes based on authentication state
-function updateBodyClasses(user = null) {
+function setAuthState(isAuth, user = null) {
     const body = document.body;
     
-    if (user) {
-        // User is authenticated
+    if (isAuth && user) {
+        currentUser = user;
         body.classList.remove('not-authenticated');
         body.classList.add('authenticated');
-        
-        // Check if user is admin
         if (user.role === 'Admin') {
             body.classList.add('is-admin');
         } else {
             body.classList.remove('is-admin');
         }
     } else {
-        // User is not authenticated
-        body.classList.remove('authenticated');
-        body.classList.remove('is-admin');
+        currentUser = null;
+        body.classList.remove('authenticated', 'is-admin');
         body.classList.add('not-authenticated');
     }
 }
 
-// ===== END PHASE 4 =====
+function navigateTo(hash) {
+    window.location.hash = hash;
+}
 
-// Get elements
+function handleRouting() {
+    const hash = window.location.hash || '#/';
+    const route = hash.substring(2);
+    
+    document.querySelectorAll('section').forEach(page => {
+        page.style.display = 'none';
+        page.classList.remove('active');
+    });
+    
+    const protectedRoutes = ['profile', 'employees', 'departments', 'accounts', 'my-requests', 'all-requests'];
+    const adminRoutes = ['employees', 'departments', 'accounts', 'all-requests'];
+    
+    if (protectedRoutes.includes(route) && !currentUser) {
+        navigateTo('#/login');
+        return;
+    }
+    
+    if (adminRoutes.includes(route) && (!currentUser || currentUser.role !== 'Admin')) {
+        navigateTo('#/profile');
+        return;
+    }
+    
+    let pageToShow = null;
+    
+    switch(route) {
+        case '':
+        case 'home':
+            pageToShow = document.getElementById('homeSection');
+            break;
+        case 'login':
+            pageToShow = document.getElementById('loginSection');
+            break;
+        case 'register':
+            pageToShow = document.getElementById('registerSection');
+            break;
+        case 'verify-email':
+            pageToShow = document.getElementById('verifyEmailSection');
+            break;
+        case 'profile':
+            pageToShow = document.getElementById('profileSection');
+            renderProfile();
+            break;
+        case 'employees':
+            pageToShow = document.getElementById('employeesSection');
+            loadEmployees();
+            break;
+        case 'departments':
+            pageToShow = document.getElementById('departmentsSection');
+            loadDepartments();
+            break;
+        case 'accounts':
+            pageToShow = document.getElementById('accountsSection');
+            loadAccounts();
+            break;
+        case 'my-requests':
+            pageToShow = document.getElementById('myRequestsSection');
+            loadMyRequests();
+            break;
+        case 'all-requests':
+            pageToShow = document.getElementById('allRequestsSection');
+            loadAllRequests();
+            break;
+        default:
+            navigateTo('#/');
+            return;
+    }
+    
+    if (pageToShow) {
+        pageToShow.style.display = 'block';
+        pageToShow.classList.add('active');
+    }
+}
+
+window.addEventListener('hashchange', handleRouting);
+
 const homeSection = document.getElementById('homeSection');
 const registerSection = document.getElementById('registerSection');
 const loginBtn = document.getElementById('loginBtn');
@@ -137,199 +285,206 @@ const requestsTable = document.getElementById('requestsTable');
 const allRequestsSection = document.getElementById('allRequestsSection');
 const allRequestsLink = document.getElementById('allRequestsLink');
 
-// Show Register Section
 registerBtn.addEventListener('click', (e) => {
     e.preventDefault();
-    homeSection.style.display = 'none';
-    registerSection.style.display = 'block';
+    navigateTo('#/register');
 });
 
-// Show Home Section (Cancel button)
 cancelRegisterBtn.addEventListener('click', () => {
-    registerSection.style.display = 'none';
-    homeSection.style.display = 'block';
+    navigateTo('#/');
 });
 
-// Get Started button (can also go to register)
 getStartedBtn.addEventListener('click', () => {
-    homeSection.style.display = 'none';
-    registerSection.style.display = 'block';
+    navigateTo('#/register');
 });
 
-// Handle Register Form Submit
 registerForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
+    const firstName = document.getElementById('regFirstName').value;
+    const lastName = document.getElementById('regLastName').value;
     const email = document.getElementById('regEmail').value;
+    const password = document.getElementById('regPassword').value;
     
-    // Store user data
+    if (password.length < 6) {
+        showToast('password must be at least 6 characters long', 'error');
+        return;
+    }
+    
+    const existingAccount = window.db.accounts.find(acc => acc.email === email);
+    if (existingAccount) {
+        showToast('an account with this email already exists', 'error');
+        return;
+    }
+    
     const userData = {
-        firstName: document.getElementById('regFirstName').value,
-        lastName: document.getElementById('regLastName').value,
+        firstName: firstName,
+        lastName: lastName,
         email: email,
-        password: document.getElementById('regPassword').value,
-        role: 'User', // Default role
+        password: password,
+        role: 'User',
         verified: false
     };
     
+    localStorage.setItem('unverified_email', email);
     localStorage.setItem('pendingUser', JSON.stringify(userData));
     
-    // Show verify email section
-    registerSection.style.display = 'none';
-    verifyEmailSection.style.display = 'block';
-    verifyEmailDisplay.textContent = email;
+    showToast('registration successful! please verify your email', 'success');
     
-    // Clear form
+    verifyEmailDisplay.textContent = email;
+    navigateTo('#/verify-email');
+    
     registerForm.reset();
 });
 
-// Simulate Email Verification
 simulateVerifyBtn.addEventListener('click', () => {
     const userData = JSON.parse(localStorage.getItem('pendingUser'));
-    userData.verified = true;
+    const unverifiedEmail = localStorage.getItem('unverified_email');
     
-    // Add to database
-    window.db.users.push(userData);
-    saveToStorage();
-    localStorage.removeItem('pendingUser');
-    
-    // Show login section with success message
-    verifyEmailSection.style.display = 'none';
-    loginSection.style.display = 'block';
-    verifiedAlert.style.display = 'block';
+    if (userData && unverifiedEmail === userData.email) {
+        userData.verified = true;
+        window.db.accounts.push(userData);
+        saveToStorage();
+        
+        localStorage.removeItem('pendingUser');
+        localStorage.removeItem('unverified_email');
+        
+        verifiedAlert.style.display = 'block';
+        showToast('email verified successfully!', 'success');
+        navigateTo('#/login');
+    } else {
+        showToast('verification failed. please register again', 'error');
+    }
 });
 
-// Go to Login button
 goToLoginBtn.addEventListener('click', () => {
-    verifyEmailSection.style.display = 'none';
-    loginSection.style.display = 'block';
+    navigateTo('#/login');
 });
 
-// Cancel Login button
 cancelLoginBtn.addEventListener('click', () => {
-    loginSection.style.display = 'none';
-    homeSection.style.display = 'block';
     verifiedAlert.style.display = 'none';
+    navigateTo('#/');
 });
 
-// Show Login Section from nav
 loginBtn.addEventListener('click', (e) => {
     e.preventDefault();
-    homeSection.style.display = 'none';
-    registerSection.style.display = 'none';
-    verifyEmailSection.style.display = 'none';
-    loginSection.style.display = 'block';
+    navigateTo('#/login');
 });
 
-// Handle Login Form Submit
 loginForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
     
-    // Get users from database
-    const user = window.db.users.find(u => u.email === email && u.password === password && u.verified);
+    const account = window.db.accounts.find(acc => 
+        acc.email === email && 
+        acc.password === password && 
+        acc.verified === true
+    );
     
-    if (user) {
-        // Store logged in user
+    if (account) {
         const loggedInUser = {
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            role: user.role
+            firstName: account.firstName,
+            lastName: account.lastName,
+            email: account.email,
+            role: account.role
         };
+        
+        localStorage.setItem('auth_token', email);
         localStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
         
-        // Update body classes for authentication
-        updateBodyClasses(loggedInUser);
-        
-        // Update UI
+        setAuthState(true, loggedInUser);
         showLoggedInNav(loggedInUser);
-        loginSection.style.display = 'none';
-        profileSection.style.display = 'block';
-        updateProfileDisplay(loggedInUser);
         
+        showToast(`welcome back, ${loggedInUser.firstName}!`, 'success');
+        
+        navigateTo('#/profile');
         loginForm.reset();
     } else {
-        alert('Invalid email or password, or email not verified.');
+        showToast('invalid email or password, or email not verified', 'error');
     }
 });
 
-// Show logged in navigation
 function showLoggedInNav(user) {
     navNotLoggedIn.setAttribute('style', 'display: none !important');
     navLoggedIn.setAttribute('style', 'display: block !important');
     usernameDisplay.textContent = user.firstName || 'Admin';
 
-    // Show/hide admin links based on role
-    const adminLinks = document.querySelectorAll('.role-admin');
-    adminLinks.forEach(link => {
+    document.querySelectorAll('.role-admin').forEach(link => {
         link.style.display = user.role === 'Admin' ? 'block' : 'none';
     });
     
-    // Show/hide user-only links
-    const userLinks = document.querySelectorAll('.role-user');
-    userLinks.forEach(link => {
+    document.querySelectorAll('.role-user').forEach(link => {
         link.style.display = user.role === 'User' ? 'block' : 'none';
     });
 }
 
-// Update profile display
-function updateProfileDisplay(user) {
+function renderProfile() {
+    const user = currentUser;
+    if (!user) return;
+    
     document.getElementById('profileName').textContent = `${user.firstName} ${user.lastName}`;
     document.getElementById('profileEmail').textContent = user.email;
     document.getElementById('profileRole').textContent = user.role;
 }
 
-// Profile link click
+function updateProfileDisplay(user) {
+    if (!user) return;
+    document.getElementById('profileName').textContent = `${user.firstName} ${user.lastName}`;
+    document.getElementById('profileEmail').textContent = user.email;
+    document.getElementById('profileRole').textContent = user.role;
+}
+
+document.getElementById('editProfileBtn')?.addEventListener('click', () => {
+    showToast('edit profile feature coming soon!', 'info');
+});
+
 profileLink.addEventListener('click', (e) => {
     e.preventDefault();
-    hideAllSections();
-    profileSection.style.display = 'block';
+    navigateTo('#/profile');
 });
 
-// Employees link click
 employeesLink.addEventListener('click', (e) => {
     e.preventDefault();
-    hideAllSections();
-    employeesSection.style.display = 'block';
-    loadEmployees();
+    navigateTo('#/employees');
 });
 
-// Logout
 logoutLink.addEventListener('click', (e) => {
     e.preventDefault();
+    
+    const userName = currentUser ? currentUser.firstName : 'user';
+    
+    localStorage.removeItem('auth_token');
     localStorage.removeItem('loggedInUser');
     
-    // Update body classes - user logged out
-    updateBodyClasses(null);
+    setAuthState(false);
     
     navLoggedIn.style.display = 'none';
     navNotLoggedIn.style.display = 'flex';
-    hideAllSections();
-    homeSection.style.display = 'block';
+    
+    showToast(`goodbye, ${userName}!`, 'info');
+    navigateTo('#/');
 });
 
-// Add Employee button
 addEmployeeBtn.addEventListener('click', () => {
     employeeFormSection.style.display = 'block';
     document.getElementById('employeeFormTitle').textContent = 'Add Employee';
     document.getElementById('employeeForm').reset();
+    document.getElementById('empId').removeAttribute('readonly');
+    delete document.getElementById('employeeForm').dataset.originalId;
 });
 
-// Cancel Employee form
 cancelEmployeeBtn.addEventListener('click', () => {
     employeeFormSection.style.display = 'none';
 });
 
-// Load employees from database
 function loadEmployees() {
     const employees = window.db.employees;
     const tbody = document.getElementById('employeesTableBody');
     
     if (employees.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No employees.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">no employees.</td></tr>';
     } else {
         tbody.innerHTML = employees.map(emp => `
             <tr>
@@ -338,15 +493,31 @@ function loadEmployees() {
                 <td>${emp.position}</td>
                 <td>${emp.department}</td>
                 <td>
-                    <button class="btn btn-sm btn-primary" onclick="editEmployee('${emp.id}')">Edit</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteEmployee('${emp.id}')">Delete</button>
+                    <button class="btn btn-sm btn-primary" onclick="editEmployee('${emp.id}')">edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteEmployee('${emp.id}')">delete</button>
                 </td>
             </tr>
         `).join('');
     }
 }
 
-// Handle employee form submit
+function editEmployee(id) {
+    const employee = window.db.employees.find(emp => emp.id === id);
+    
+    if (employee) {
+        employeeFormSection.style.display = 'block';
+        document.getElementById('employeeFormTitle').textContent = 'Edit Employee';
+        document.getElementById('empId').value = employee.id;
+        document.getElementById('empEmail').value = employee.email;
+        document.getElementById('empPosition').value = employee.position;
+        document.getElementById('empDepartment').value = employee.department;
+        document.getElementById('empHireDate').value = employee.hireDate;
+        
+        document.getElementById('empId').setAttribute('readonly', true);
+        document.getElementById('employeeForm').dataset.originalId = id;
+    }
+}
+
 document.getElementById('employeeForm').addEventListener('submit', (e) => {
     e.preventDefault();
     
@@ -358,108 +529,130 @@ document.getElementById('employeeForm').addEventListener('submit', (e) => {
         hireDate: document.getElementById('empHireDate').value
     };
     
-    window.db.employees.push(employee);
-    saveToStorage();
+    const originalId = document.getElementById('employeeForm').dataset.originalId;
     
+    if (originalId) {
+        const empIndex = window.db.employees.findIndex(e => e.id === originalId);
+        if (empIndex !== -1) {
+            window.db.employees[empIndex] = employee;
+            showToast('employee updated successfully', 'success');
+        }
+        delete document.getElementById('employeeForm').dataset.originalId;
+        document.getElementById('empId').removeAttribute('readonly');
+    } else {
+        const existingEmployee = window.db.employees.find(e => e.id === employee.id);
+        if (existingEmployee) {
+            showToast('an employee with this id already exists', 'error');
+            return;
+        }
+        window.db.employees.push(employee);
+        showToast('employee added successfully', 'success');
+    }
+    
+    saveToStorage();
     employeeFormSection.style.display = 'none';
+    document.getElementById('employeeForm').reset();
     loadEmployees();
 });
 
-// Delete employee
 function deleteEmployee(id) {
-    if (confirm(`Delete employee "${id}"?`)) {
+    if (confirm(`delete employee "${id}"?`)) {
         window.db.employees = window.db.employees.filter(e => e.id !== id);
         saveToStorage();
         loadEmployees();
+        showToast('employee deleted successfully', 'success');
     }
 }
 
-// Departments link click
 departmentsLink.addEventListener('click', (e) => {
     e.preventDefault();
-    hideAllSections();
-    departmentsSection.style.display = 'block';
-    loadDepartments();
+    navigateTo('#/departments');
 });
 
-// Accounts link click
 accountsLink.addEventListener('click', (e) => {
     e.preventDefault();
-    hideAllSections();
-    accountsSection.style.display = 'block';
-    loadAccounts();
+    navigateTo('#/accounts');
 });
 
-// Add Department button
 addDepartmentBtn.addEventListener('click', () => {
     departmentFormSection.style.display = 'block';
     document.getElementById('departmentFormTitle').textContent = 'Add Department';
     document.getElementById('departmentForm').reset();
+    document.getElementById('deptName').removeAttribute('readonly');
+    delete document.getElementById('departmentForm').dataset.originalName;
 });
 
-// Cancel Department form
 cancelDepartmentBtn.addEventListener('click', () => {
     departmentFormSection.style.display = 'none';
 });
 
-// Add Account button
 addAccountBtn.addEventListener('click', () => {
     accountFormSection.style.display = 'block';
     document.getElementById('accountFormTitle').textContent = 'Add Account';
     document.getElementById('accountForm').reset();
 });
 
-// Cancel Account form
 cancelAccountBtn.addEventListener('click', () => {
     accountFormSection.style.display = 'none';
 });
 
-// Load departments from database
 function loadDepartments() {
     const departments = window.db.departments;
     const tbody = document.getElementById('departmentsTableBody');
     
     if (departments.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No departments.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">no departments.</td></tr>';
     } else {
         tbody.innerHTML = departments.map(dept => `
             <tr>
                 <td>${dept.name}</td>
                 <td>${dept.description}</td>
                 <td>
-                    <button class="btn btn-sm btn-primary" onclick="editDepartment('${dept.name}')">Edit</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteDepartment('${dept.name}')">Delete</button>
+                    <button class="btn btn-sm btn-primary" onclick="editDepartment('${dept.name}')">edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteDepartment('${dept.name}')">delete</button>
                 </td>
             </tr>
         `).join('');
     }
 }
 
-// Load accounts from database
+function editDepartment(name) {
+    const department = window.db.departments.find(dept => dept.name === name);
+    
+    if (department) {
+        departmentFormSection.style.display = 'block';
+        document.getElementById('departmentFormTitle').textContent = 'Edit Department';
+        document.getElementById('deptName').value = department.name;
+        document.getElementById('deptDescription').value = department.description;
+        
+        document.getElementById('deptName').setAttribute('readonly', true);
+        document.getElementById('departmentForm').dataset.originalName = name;
+    }
+}
+
 function loadAccounts() {
-    const users = window.db.users;
+    const accounts = window.db.accounts;
     const tbody = document.getElementById('accountsTableBody');
     
-    if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No accounts.</td></tr>';
+    if (accounts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">no accounts.</td></tr>';
     } else {
-        tbody.innerHTML = users.map(user => `
+        tbody.innerHTML = accounts.map(account => `
             <tr>
-                <td>${user.firstName} ${user.lastName}</td>
-                <td>${user.email}</td>
-                <td>${user.role || 'User'}</td>
-                <td>${user.verified ? '✅' : '❌'}</td>
+                <td>${account.firstName} ${account.lastName}</td>
+                <td>${account.email}</td>
+                <td>${account.role || 'User'}</td>
+                <td>${account.verified ? '✅' : '❌'}</td>
                 <td>
-                    <button class="btn btn-sm btn-primary" onclick="editAccount('${user.email}')">Edit</button>
-                    <button class="btn btn-sm btn-warning" onclick="resetAccountPassword('${user.email}')">Reset Password</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteAccount('${user.email}')">Delete</button>
+                    <button class="btn btn-sm btn-primary" onclick="editAccount('${account.email}')">edit</button>
+                    <button class="btn btn-sm btn-warning" onclick="resetAccountPassword('${account.email}')">reset password</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteAccount('${account.email}')">delete</button>
                 </td>
             </tr>
         `).join('');
     }
 }
 
-// Handle department form submit
 document.getElementById('departmentForm').addEventListener('submit', (e) => {
     e.preventDefault();
     
@@ -468,22 +661,47 @@ document.getElementById('departmentForm').addEventListener('submit', (e) => {
         description: document.getElementById('deptDescription').value
     };
     
-    window.db.departments.push(department);
-    saveToStorage();
+    const originalName = document.getElementById('departmentForm').dataset.originalName;
     
+    if (originalName) {
+        const deptIndex = window.db.departments.findIndex(d => d.name === originalName);
+        if (deptIndex !== -1) {
+            window.db.departments[deptIndex] = department;
+            showToast('department updated successfully', 'success');
+        }
+        delete document.getElementById('departmentForm').dataset.originalName;
+        document.getElementById('deptName').removeAttribute('readonly');
+    } else {
+        const existingDept = window.db.departments.find(d => d.name === department.name);
+        if (existingDept) {
+            showToast('a department with this name already exists', 'error');
+            return;
+        }
+        window.db.departments.push(department);
+        showToast('department added successfully', 'success');
+    }
+    
+    saveToStorage();
     departmentFormSection.style.display = 'none';
+    document.getElementById('departmentForm').reset();
     loadDepartments();
 });
 
-// Handle account form submit
 document.getElementById('accountForm').addEventListener('submit', (e) => {
     e.preventDefault();
+    
+    const password = document.getElementById('accPassword').value;
+    
+    if (password.length < 6) {
+        showToast('password must be at least 6 characters long', 'error');
+        return;
+    }
     
     const account = {
         firstName: document.getElementById('accFirstName').value,
         lastName: document.getElementById('accLastName').value,
         email: document.getElementById('accEmail').value,
-        password: document.getElementById('accPassword').value,
+        password: password,
         role: document.getElementById('accRole').value,
         verified: document.getElementById('accVerified').checked
     };
@@ -491,15 +709,20 @@ document.getElementById('accountForm').addEventListener('submit', (e) => {
     const originalEmail = document.getElementById('accountForm').dataset.originalEmail;
     
     if (originalEmail) {
-        // Edit existing account
-        const userIndex = window.db.users.findIndex(u => u.email === originalEmail);
-        if (userIndex !== -1) {
-            window.db.users[userIndex] = account;
+        const accountIndex = window.db.accounts.findIndex(acc => acc.email === originalEmail);
+        if (accountIndex !== -1) {
+            window.db.accounts[accountIndex] = account;
+            showToast('account updated successfully', 'success');
         }
         delete document.getElementById('accountForm').dataset.originalEmail;
     } else {
-        // Add new account
-        window.db.users.push(account);
+        const existingAccount = window.db.accounts.find(acc => acc.email === account.email);
+        if (existingAccount) {
+            showToast('an account with this email already exists', 'error');
+            return;
+        }
+        window.db.accounts.push(account);
+        showToast('account created successfully', 'success');
     }
     
     saveToStorage();
@@ -508,111 +731,93 @@ document.getElementById('accountForm').addEventListener('submit', (e) => {
     loadAccounts();
 });
 
-// Delete department
 function deleteDepartment(name) {
-    if (confirm(`Delete department "${name}"?`)) {
+    if (confirm(`delete department "${name}"?`)) {
         window.db.departments = window.db.departments.filter(d => d.name !== name);
         saveToStorage();
         loadDepartments();
+        showToast('department deleted successfully', 'success');
     }
 }
 
-// Delete account
 function deleteAccount(email) {
-    if (confirm(`Delete account "${email}"?`)) {
-        window.db.users = window.db.users.filter(u => u.email !== email);
+    if (currentUser && email === currentUser.email) {
+        showToast('you cannot delete your own account while logged in', 'warning');
+        return;
+    }
+    
+    if (confirm(`delete account "${email}"?`)) {
+        window.db.accounts = window.db.accounts.filter(acc => acc.email !== email);
         saveToStorage();
         loadAccounts();
+        showToast('account deleted successfully', 'success');
     }
 }
 
-// Hide all sections helper
-function hideAllSections() {
-    homeSection.style.display = 'none';
-    registerSection.style.display = 'none';
-    verifyEmailSection.style.display = 'none';
-    loginSection.style.display = 'none';
-    profileSection.style.display = 'none';
-    employeesSection.style.display = 'none';
-    employeeFormSection.style.display = 'none';
-    departmentsSection.style.display = 'none';
-    departmentFormSection.style.display = 'none';
-    accountsSection.style.display = 'none';
-    accountFormSection.style.display = 'none';
-    myRequestsSection.style.display = 'none';
-    allRequestsSection.style.display = 'none';
-}
-
-// Edit account
 function editAccount(email) {
-    const user = window.db.users.find(u => u.email === email);
+    const account = window.db.accounts.find(acc => acc.email === email);
     
-    if (user) {
+    if (account) {
         accountFormSection.style.display = 'block';
         document.getElementById('accountFormTitle').textContent = 'Edit Account';
-        document.getElementById('accFirstName').value = user.firstName;
-        document.getElementById('accLastName').value = user.lastName;
-        document.getElementById('accEmail').value = user.email;
-        document.getElementById('accPassword').value = user.password;
-        document.getElementById('accRole').value = user.role || 'User';
-        document.getElementById('accVerified').checked = user.verified;
+        document.getElementById('accFirstName').value = account.firstName;
+        document.getElementById('accLastName').value = account.lastName;
+        document.getElementById('accEmail').value = account.email;
+        document.getElementById('accPassword').value = account.password;
+        document.getElementById('accRole').value = account.role || 'User';
+        document.getElementById('accVerified').checked = account.verified;
         
-        // Store original email for updating
         document.getElementById('accountForm').dataset.originalEmail = email;
     }
 }
 
-// Reset account password
 function resetAccountPassword(email) {
-    const newPassword = prompt('Enter new password for ' + email + ':');
+    const newPassword = prompt('enter new password for ' + email + ' (min 6 characters):');
     if (newPassword) {
-        const userIndex = window.db.users.findIndex(u => u.email === email);
+        if (newPassword.length < 6) {
+            showToast('password must be at least 6 characters long', 'error');
+            return;
+        }
         
-        if (userIndex !== -1) {
-            window.db.users[userIndex].password = newPassword;
+        const accountIndex = window.db.accounts.findIndex(acc => acc.email === email);
+        
+        if (accountIndex !== -1) {
+            window.db.accounts[accountIndex].password = newPassword;
             saveToStorage();
-            alert('Password reset successfully!');
+            showToast('password reset successfully!', 'success');
             loadAccounts();
         }
     }
 }
 
-// Reset Password button in form
 resetPasswordBtn.addEventListener('click', () => {
     const email = document.getElementById('accEmail').value;
     if (email) {
         resetAccountPassword(email);
         accountFormSection.style.display = 'none';
     } else {
-        alert('Please fill in the email field first.');
+        showToast('please fill in the email field first', 'warning');
     }
 });
 
-// My Requests link click
 myRequestsLink.addEventListener('click', (e) => {
     e.preventDefault();
-    hideAllSections();
-    myRequestsSection.style.display = 'block';
-    loadMyRequests();
+    navigateTo('#/my-requests');
 });
 
-// New Request button
 newRequestBtn.addEventListener('click', () => {
     requestModal.style.display = 'block';
 });
 
-// Create First Request button
 createFirstRequestBtn.addEventListener('click', () => {
     requestModal.style.display = 'block';
 });
 
-// Close Request Modal
 closeRequestModal.addEventListener('click', () => {
     requestModal.style.display = 'none';
     requestForm.reset();
 });
 
-// Close modal when clicking outside
 requestModal.addEventListener('click', (e) => {
     if (e.target === requestModal) {
         requestModal.style.display = 'none';
@@ -620,25 +825,22 @@ requestModal.addEventListener('click', (e) => {
     }
 });
 
-// Add request item
 function addRequestItem() {
     const itemsDiv = document.getElementById('requestItems');
     const newItem = document.createElement('div');
     newItem.className = 'input-group mb-2';
     newItem.innerHTML = `
-        <input type="text" class="form-control" placeholder="Item name" required>
+        <input type="text" class="form-control" placeholder="item name" required>
         <input type="number" class="form-control" value="1" min="1" style="max-width: 80px;">
         <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">×</button>
     `;
     itemsDiv.appendChild(newItem);
 }
 
-// Load My Requests
 function loadMyRequests() {
-    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
-    if (!loggedInUser) return;
+    if (!currentUser) return;
     
-    const myRequests = window.db.requests.filter(req => req.userEmail === loggedInUser.email);
+    const myRequests = window.db.requests.filter(req => req.userEmail === currentUser.email);
     
     if (myRequests.length === 0) {
         noRequestsMessage.style.display = 'block';
@@ -655,22 +857,19 @@ function loadMyRequests() {
                 <td><span class="badge bg-${req.status === 'Pending' ? 'warning' : req.status === 'Approved' ? 'success' : 'danger'}">${req.status}</span></td>
                 <td>${new Date(req.date).toLocaleDateString()}</td>
                 <td>
-                    <button class="btn btn-sm btn-info" onclick="viewRequest('${req.id}')">View</button>
-                    ${req.status === 'Pending' ? `<button class="btn btn-sm btn-danger" onclick="deleteRequest('${req.id}')">Delete</button>` : ''}
+                    <button class="btn btn-sm btn-info" onclick="viewRequest('${req.id}')">view</button>
+                    ${req.status === 'Pending' ? `<button class="btn btn-sm btn-danger" onclick="deleteRequest('${req.id}')">delete</button>` : ''}
                 </td>
             </tr>
         `).join('');
     }
 }
 
-// Handle request form submit
 requestForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
-    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
-    if (!loggedInUser) return;
+    if (!currentUser) return;
     
-    // Get all items
     const itemInputs = document.querySelectorAll('#requestItems .input-group');
     const items = Array.from(itemInputs).map(group => {
         const inputs = group.querySelectorAll('input');
@@ -682,8 +881,8 @@ requestForm.addEventListener('submit', (e) => {
     
     const request = {
         id: Date.now().toString(),
-        userEmail: loggedInUser.email,
-        userName: `${loggedInUser.firstName} ${loggedInUser.lastName}`,
+        userEmail: currentUser.email,
+        userName: `${currentUser.firstName} ${currentUser.lastName}`,
         type: document.getElementById('requestType').value,
         items: items,
         status: 'Pending',
@@ -696,40 +895,37 @@ requestForm.addEventListener('submit', (e) => {
     requestModal.style.display = 'none';
     requestForm.reset();
     loadMyRequests();
+    
+    showToast('request submitted successfully!', 'success');
 });
 
-// View request
 function viewRequest(id) {
     const request = window.db.requests.find(r => r.id === id);
     if (request) {
-        alert(`Request Details:\nType: ${request.type}\nItems: ${request.items.map(i => `${i.name} (${i.quantity})`).join(', ')}\nStatus: ${request.status}`);
+        alert(`request details:\ntype: ${request.type}\nitems: ${request.items.map(i => `${i.name} (${i.quantity})`).join(', ')}\nstatus: ${request.status}`);
     }
 }
 
-// Delete request
 function deleteRequest(id) {
-    if (confirm('Delete this request?')) {
+    if (confirm('delete this request?')) {
         window.db.requests = window.db.requests.filter(r => r.id !== id);
         saveToStorage();
         loadMyRequests();
+        showToast('request deleted successfully', 'success');
     }
 }
 
-// All Requests link click (Admin only)
 allRequestsLink.addEventListener('click', (e) => {
     e.preventDefault();
-    hideAllSections();
-    allRequestsSection.style.display = 'block';
-    loadAllRequests();
+    navigateTo('#/all-requests');
 });
 
-// Load All Requests (Admin only)
 function loadAllRequests() {
     const allRequests = window.db.requests;
     const tbody = document.getElementById('allRequestsTableBody');
     
     if (allRequests.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No requests.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">no requests.</td></tr>';
     } else {
         tbody.innerHTML = allRequests.map(req => `
             <tr>
@@ -739,10 +935,10 @@ function loadAllRequests() {
                 <td><span class="badge bg-${req.status === 'Pending' ? 'warning' : req.status === 'Approved' ? 'success' : 'danger'}">${req.status}</span></td>
                 <td>${new Date(req.date).toLocaleDateString()}</td>
                 <td>
-                    <button class="btn btn-sm btn-info" onclick="viewRequest('${req.id}')">View</button>
+                    <button class="btn btn-sm btn-info" onclick="viewRequest('${req.id}')">view</button>
                     ${req.status === 'Pending' ? `
-                        <button class="btn btn-sm btn-success" onclick="approveRequest('${req.id}')">Approve</button>
-                        <button class="btn btn-sm btn-danger" onclick="rejectRequest('${req.id}')">Reject</button>
+                        <button class="btn btn-sm btn-success" onclick="approveRequest('${req.id}')">approve</button>
+                        <button class="btn btn-sm btn-danger" onclick="rejectRequest('${req.id}')">reject</button>
                     ` : ''}
                 </td>
             </tr>
@@ -750,43 +946,45 @@ function loadAllRequests() {
     }
 }
 
-// Approve request (Admin only)
 function approveRequest(id) {
-    if (confirm('Approve this request?')) {
+    if (confirm('approve this request?')) {
         const requestIndex = window.db.requests.findIndex(r => r.id === id);
         if (requestIndex !== -1) {
             window.db.requests[requestIndex].status = 'Approved';
             saveToStorage();
             loadAllRequests();
+            showToast('request approved', 'success');
         }
     }
 }
 
-// Reject request (Admin only)
 function rejectRequest(id) {
-    if (confirm('Reject this request?')) {
+    if (confirm('reject this request?')) {
         const requestIndex = window.db.requests.findIndex(r => r.id === id);
         if (requestIndex !== -1) {
             window.db.requests[requestIndex].status = 'Rejected';
             saveToStorage();
             loadAllRequests();
+            showToast('request rejected', 'info');
         }
     }
 }
 
-// Check if user is already logged in on page load
 window.addEventListener('load', () => {
-    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
-    if (loggedInUser) {
-        // Update body classes for authenticated user
-        updateBodyClasses(loggedInUser);
-        
-        showLoggedInNav(loggedInUser);
-        updateProfileDisplay(loggedInUser);
-        hideAllSections();
-        profileSection.style.display = 'block';
-    } else {
-        // Update body classes for non-authenticated user
-        updateBodyClasses(null);
+    if (!window.location.hash) {
+        window.location.hash = '#/';
     }
+    
+    const authToken = localStorage.getItem('auth_token');
+    const loggedInUser = localStorage.getItem('loggedInUser');
+    
+    if (authToken && loggedInUser) {
+        const user = JSON.parse(loggedInUser);
+        setAuthState(true, user);
+        showLoggedInNav(user);
+    } else {
+        setAuthState(false);
+    }
+    
+    handleRouting();
 });
